@@ -26,11 +26,10 @@ class handler(BaseHTTPRequestHandler):
         origin = self.headers.get("Origin", "")
 
         if ALLOWED_ORIGIN and origin == ALLOWED_ORIGIN:
-            self.send_header(
-                "Access-Control-Allow-Origin",
-                origin
-            )
+            self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
+        elif not ALLOWED_ORIGIN:
+            self.send_header("Access-Control-Allow-Origin", "*")
 
     def send_json(self, status_code, data):
         body = json.dumps(
@@ -54,13 +53,13 @@ class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         origin = self.headers.get("Origin", "")
 
-        if ALLOWED_ORIGIN and origin != ALLOWED_ORIGIN:
-            self.send_response(403)
-            self.end_headers()
-            return
-
         self.send_response(204)
-        self.add_cors_headers()
+        if ALLOWED_ORIGIN and origin == ALLOWED_ORIGIN:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+        else:
+            self.send_header("Access-Control-Allow-Origin", "*")
+
         self.send_header(
             "Access-Control-Allow-Methods",
             "POST, OPTIONS"
@@ -79,8 +78,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_json(
             405,
             {
-                "error":
-                    "Este endpoint solamente acepta POST."
+                "error": "Este endpoint solamente acepta POST."
             }
         )
 
@@ -226,7 +224,6 @@ No inventes objetos que no sean visibles.
             self.send_json(
                 500,
                 {
-                    "error":
-                        "No fue posible analizar la imagen."
+                    "error": "No fue posible analizar la imagen."
                 }
             )

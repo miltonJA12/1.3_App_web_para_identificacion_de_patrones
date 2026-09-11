@@ -5,7 +5,6 @@ import sys
 from http.server import BaseHTTPRequestHandler
 from openai import OpenAI
 
-# Obtiene y limpia el origen permitido desde Vercel
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "").strip().rstrip("/").lower()
 
 MAX_IMAGE_BYTES = 3 * 1024 * 1024
@@ -58,12 +57,10 @@ class handler(BaseHTTPRequestHandler):
         try:
             origin = self.get_origin()
 
-            # 1. Validación de CORS
             if not self.is_origin_allowed(origin):
                 self.send_json(403, {"error": f"Origen no autorizado: {origin}"})
                 return
 
-            # 2. Validación de longitud
             content_length = int(self.headers.get("Content-Length", 0))
             if content_length <= 0 or content_length > MAX_REQUEST_BYTES:
                 self.send_json(413, {"error": "La petición es demasiado grande."})
@@ -91,7 +88,7 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             if not prompt:
-                prompt = "Identifica los patrones y objetos visibles, agrúpalos por tipo y estima cuántos aparecen."
+                prompt = "Analiza los patrones, objetos y elementos clave visibles en la imagen."
 
             api_key = os.environ.get("OPENAI_API_KEY")
             if not api_key:
@@ -104,15 +101,20 @@ class handler(BaseHTTPRequestHandler):
                 max_retries=1
             )
 
+            # Prompt ajustado para respuestas fluidas y naturales
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
+                    {
+                        "role": "system",
+                        "content": "Eres un asistente de visión por computadora conversacional, amable y preciso. Responde directamente a la pregunta del usuario de forma fluida, amigable y clara en español. No utilices formato Markdown como asteriscos (**) ni listas numeradas rígidas, usa texto limpio con viñetas simples (-) o párrafos directos."
+                    },
                     {
                         "role": "user",
                         "content": [
                             {
                                 "type": "text",
-                                "text": f"Analiza la imagen respondiendo a la siguiente petición:\n{prompt}"
+                                "text": prompt
                             },
                             {
                                 "type": "image_url",

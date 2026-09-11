@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identificador de patrones con IA</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+    <main class="app">
+        <header class="header">
+            <div>
+                <h1>Analizador visual IA</h1>
+                <p>Identificación de patrones y objetos en imágenes</p>
+            </div>
+            <span id="statusText" class="status">● IA disponible</span>
+        </header>
+
+        <form id="analyzeForm" class="content">
+            <section class="panel">
+                <div class="field">
+                    <label for="imageInput">1. Selecciona una imagen</label>
+                    <input
+                        id="imageInput"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        required
+                    >
+                </div>
+
+                <img id="preview" class="preview" alt="Vista previa de la imagen">
+
+                <div class="field">
+                    <label for="promptInput">2. ¿Qué quieres identificar?</label>
+                    <textarea
+                        id="promptInput"
+                        maxlength="500"
+                        placeholder="Ejemplo: identifica los objetos y estima cuántos hay de cada tipo."
+                    ></textarea>
+                </div>
+
+                <button id="analyzeButton" type="submit" disabled>
+                    Analizar imagen
+                </button>
+            </section>
+
+            <section class="panel">
+                <h2>Resultado del análisis</h2>
+                <pre id="result" class="result">Selecciona una imagen para comenzar.</pre>
+            </section>
+        </form>
+
+        <p class="note">
+            Usa imágenes sin información sensible. El archivo seleccionado se envía al backend para ser analizado por el modelo de IA.
+        </p>
+    </main>
+
+    <footer>
+        <p>Desarrollado por: <strong>Milton Juarez Austria</strong> | No. de Control: <strong>22200783</strong> | Carrera: <strong>ITICS</strong></p>
+    </footer>
+
+    <script src="assets/js/app.js"></script>
+</body>
+</html>

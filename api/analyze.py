@@ -5,6 +5,7 @@ import sys
 from http.server import BaseHTTPRequestHandler
 from openai import OpenAI
 
+# Obtener origen permitido
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "").rstrip("/").lower()
 
 MAX_IMAGE_BYTES = 3 * 1024 * 1024
@@ -17,21 +18,17 @@ ALLOWED_PREFIXES = (
 
 class handler(BaseHTTPRequestHandler):
 
-    def get_origin(self):
-        return self.headers.get("Origin", "")
-
-    def is_origin_allowed(self, origin):
-        if not ALLOWED_ORIGIN:
-            return True
-        return origin.rstrip("/").lower() == ALLOWED_ORIGIN
-
     def add_cors_headers(self):
-        origin = self.get_origin()
-        if self.is_origin_allowed(origin):
-            self.send_header("Access-Control-Allow-Origin", origin if origin else "*")
+        """Añade cabeceras CORS para permitir la conexión."""
+        origin = self.headers.get("Origin", "")
+        if ALLOWED_ORIGIN and origin.rstrip("/").lower() == ALLOWED_ORIGIN:
+            self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
+        else:
+            self.send_header("Access-Control-Allow-Origin", "*")
 
     def send_json(self, status_code, data):
+        """Helper para responder en formato JSON."""
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -41,13 +38,12 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_OPTIONS(self):
-        origin = self.get_origin()
-        self.send_response(204)
-        if self.is_origin_allowed(origin):
-            self.add_cors_headers()
-            self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
-            self.send_header("Access-Control-Max-Age", "86400")
+        """Respuesta para peticiones preflight CORS."""
+        self.send_response(200)
+        self.add_cors_headers()
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Max-Age", "86400")
         self.end_headers()
 
     def do_GET(self):
@@ -55,12 +51,6 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            origin = self.get_origin()
-
-            if not self.is_origin_allowed(origin):
-                self.send_json(403, {"error": "Origen no autorizado."})
-                return
-
             content_length = int(self.headers.get("Content-Length", 0))
             if content_length <= 0 or content_length > MAX_REQUEST_BYTES:
                 self.send_json(413, {"error": "La petición es demasiado grande."})
@@ -98,7 +88,7 @@ class handler(BaseHTTPRequestHandler):
             client = OpenAI(
                 api_key=api_key.strip(),
                 timeout=35.0,
-                max_retries=2
+                max_retries=1
             )
 
             response = client.chat.completions.create(
@@ -109,7 +99,7 @@ class handler(BaseHTTPRequestHandler):
                         "content": [
                             {
                                 "type": "text",
-                                "text": f"Analiza la imagen de forma estructurada en español:\n1. Descripción general.\n2. Patrones u objetos identificados.\n3. Conteo estimado por categoría.\n4. Nivel de certeza.\n\nSolicitud del usuario: {prompt}"
+                                "text": f"Analiza la imagen respondiendo a la siguiente petición:\n{prompt}"
                             },
                             {
                                 "type": "image_url",
@@ -130,6 +120,6 @@ class handler(BaseHTTPRequestHandler):
             self.send_json(400, {"error": "El cuerpo no contiene JSON válido."})
 
         except Exception as error:
-            error_str = str(error)
-            print(f"Error detectado en /api/analyze: {error_str}", file=sys.stderr)
-            self.send_json(500, {"error": f"Error de OpenAI o Servidor: {error_str}"})
+            err_msg = str(error)
+            print(f"Error en /api/analyze: {err_msg}", file=sys.stderr)
+            self.send_json(500, {"error": f"Error del servidor o de la API de OpenAI: {err_msg}"})

@@ -1,4 +1,4 @@
-const API_URL = "https://identificacion-mu.vercel.app/api/analyze";
+const API_URL = "https://patrones-five.vercel.app/api/analyze";
 
 const form = document.getElementById("analyzeForm");
 const fileInput = document.getElementById("imageInput");

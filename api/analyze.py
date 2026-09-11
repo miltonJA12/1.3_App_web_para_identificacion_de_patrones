@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import traceback
 from http.server import BaseHTTPRequestHandler
 from openai import OpenAI
 
@@ -69,12 +70,11 @@ class handler(BaseHTTPRequestHandler):
             api_key = os.environ.get("OPENAI_API_KEY")
 
             if not api_key:
-                self.send_json(500, {"error": "OPENAI_API_KEY no está configurada en Vercel."})
+                self.send_json(500, {"error": "OPENAI_API_KEY no está configurada en las Environment Variables de Vercel."})
                 return
 
             client = OpenAI(api_key=api_key.strip())
 
-            # Llamada Chat Completions compatible con visión
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -116,5 +116,7 @@ No inventes objetos que no sean visibles.
             self.send_json(400, {"error": "El cuerpo no contiene JSON válido."})
 
         except Exception as error:
-            print(f"Error en /api/analyze: {type(error).__name__}: {error}")
-            self.send_json(500, {"error": f"Error del servidor: {str(error)}"})
+            error_details = str(error)
+            print(f"Error en /api/analyze: {error_details}")
+            print(traceback.format_exc())
+            self.send_json(500, {"error": f"Error en OpenAI/Server: {error_details}"})

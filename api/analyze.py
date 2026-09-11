@@ -5,8 +5,8 @@ import sys
 from http.server import BaseHTTPRequestHandler
 from openai import OpenAI
 
-# Obtener origen permitido
-ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "").rstrip("/").lower()
+# Obtiene y limpia el origen permitido desde Vercel
+ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "").strip().rstrip("/").lower()
 
 MAX_IMAGE_BYTES = 3 * 1024 * 1024
 MAX_REQUEST_BYTES = 4_400_000
@@ -18,17 +18,23 @@ ALLOWED_PREFIXES = (
 
 class handler(BaseHTTPRequestHandler):
 
+    def get_origin(self):
+        return self.headers.get("Origin", "")
+
+    def is_origin_allowed(self, origin):
+        if not ALLOWED_ORIGIN:
+            return True
+        return origin.strip().rstrip("/").lower() == ALLOWED_ORIGIN
+
     def add_cors_headers(self):
-        """Añade cabeceras CORS para permitir la conexión."""
-        origin = self.headers.get("Origin", "")
-        if ALLOWED_ORIGIN and origin.rstrip("/").lower() == ALLOWED_ORIGIN:
+        origin = self.get_origin()
+        if ALLOWED_ORIGIN and self.is_origin_allowed(origin):
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
         else:
             self.send_header("Access-Control-Allow-Origin", "*")
 
     def send_json(self, status_code, data):
-        """Helper para responder en formato JSON."""
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -38,7 +44,6 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_OPTIONS(self):
-        """Respuesta para peticiones preflight CORS."""
         self.send_response(200)
         self.add_cors_headers()
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
@@ -51,6 +56,14 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
+            origin = self.get_origin()
+
+            # 1. Validación de CORS
+            if not self.is_origin_allowed(origin):
+                self.send_json(403, {"error": f"Origen no autorizado: {origin}"})
+                return
+
+            # 2. Validación de longitud
             content_length = int(self.headers.get("Content-Length", 0))
             if content_length <= 0 or content_length > MAX_REQUEST_BYTES:
                 self.send_json(413, {"error": "La petición es demasiado grande."})
